@@ -1,0 +1,60 @@
+This is the ideafile for Pyttleship
+started: 2021/12/16
+
+Ill make two versions for this game
+One wht you can play in the console
+And one what you can play in a window via pygame
+Later ill add an online mode for both types
+
+Class structure:
+Ship
+Board
+Player
+(Input)
+(GUI)
+Round
+Game
+
+Game Procedure:
+ask Players for their names
+init players
+show own board
+ask Players to place ships
+random generate start player
+
+Round Procedure:
+show board from other player
+ask player to fire in a tile
+show result
+move to next player
+
+when player has no ships left
+then delete player
+
+
+
+water = .
+ship_hit = X
+water_hit = o
+
+Ships:
+Carrier	= CCCCC
+Battleship = BBBB
+Destroyer = DDD
+Submarine = SSS
+Patrol Boat = PP
+
+
+          A B C D E F G H I J             A B C D E F G H I J
+        0 . . . . . . . . . .           0 . . . . . . . . . .
+        1 . . . . . . . . . .           1 . . . . . . . . . .
+        2 . . . . . . . . . .           2 . . . . . . . . . .
+        3 . . . . . . . . . .           3 . . . . . . . . . .
+        4 . . . . . . . . . .           4 . . . . . . . . . .
+        5 . . . . . . . . . .           5 . . . . . . . . . .
+        6 . . . . . . . . . .           6 . . . . . . . . . .
+        7 . . . . . . . . . .           7 . . . . . . . . . .
+        8 . . . . . . . . . .           8 . . . . . . . . . .
+        9 . . . . . . . . . .           9 . . . . . . . . . .
+
+Fire at: D6
