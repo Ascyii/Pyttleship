@@ -42,7 +42,7 @@ Carrier	= CCCCC
 Battleship = BBBB
 Destroyer = DDD
 Submarine = SSS
-Patrol Boat = PP
+Patrol = PP
 
 
           A B C D E F G H I J             A B C D E F G H I J
