@@ -1,4 +1,7 @@
 import sys
+import random
+
+# TODO: check nearby fields in valid function
 
 
 class Field:
@@ -36,6 +39,20 @@ class Ship:
         self.fields = []
         self.update_fields()
 
+    # Checks if ship is valid important to call before adding to board
+    def valid(self, alert=False, ships=None):
+        for field in self.fields:
+            if 0 > field[0] or field[0] > 9 or 0 > field[1] or field[1] > 9:
+                if alert:
+                    print(f"{self.name} out of boundaries!")
+                return False
+        for ship in ships:
+            if any(coord in ship.fields for coord in self.fields):
+                if alert:
+                    print(f"{self.name} is colliding with {ship.name}!")
+                return False
+        return True
+
     def update_fields(self):
         for i in range(self.length):
             field = [self.origin[0] + Ship.orientations[self.orientation][0] * i,
@@ -49,7 +66,8 @@ class Board:
     grid_size = len(vertical_row)
 
     # Can be initialized with type "own" or type "opp"
-    def __init__(self, board_type: str = "own"):
+    def __init__(self, owner, board_type: str = "own"):
+        self.owner = owner
         self.field = []
         self.ships = []
         self.type = board_type
@@ -61,9 +79,9 @@ class Board:
 
     def show_caption(self, shift):
         if self.type == "own":
-            print("       " + " " * shift + "Own Board")
+            print("   " + " " * shift + f"Player{self.owner.id+1}: " + " Own Board")
         elif self.type == "opp":
-            print("       " + " " * shift + "Opp Board")
+            print("   " + " " * shift + f"Player{self.owner.id+1}: " + "Opp Board")
         else:
             raise TypeError(f"wrong board_type: {self.type}")
 
@@ -86,10 +104,12 @@ class Board:
 class Player:
     ships = ["carrier", "battleship", "destroyer", "submarine", "patrol"]
     letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+    orientations = ["N", "S", "E", "W"]
 
     def __init__(self, player_id=0):
         self.id = player_id
-        self.boards = [Board("own"), Board("opp")]
+        self.boards = [Board(self, "own"), Board(self, "opp")]
+        self.ships = []
         self.ships_alive = 5
 
     def __str__(self):
@@ -105,12 +125,41 @@ class Player:
         for board in self.boards:
             board.show()
 
-    def place_ships(self):
+    def user_input(self, q):
+        inp = input(q)
+        if inp == "exit":
+            sys.exit(1)
+        if inp == "show":
+            self.show_boards()
+        return inp
+
+    def place_ships(self, place_random=True):
+        if not place_random:
+            self.show_own_board()
+            alert = True
+        else:
+            alert = False
         for ship in Player.ships:
-            # Syntax: X(Letter) Y(Number) Orientation(N, E, S, W)
-            inp = input(f"Enter coordinates and orientation of {ship}: ")
-            ship = Ship(ship, int(Player.letters.index(inp[0])), int(inp[2]), str(inp[4]))
-            self.boards[0].place_ship(ship)
+            # Syntax: X(Letter)Y(Number)Orientation(N, E, S, W)
+            while True:
+                if not place_random:
+                    inp = self.user_input(f"Enter coordinates and orientation of {ship}({Ship.ship_lenght[ship]}): ")
+                else:
+                    inp = f"{random.choice(Player.letters)}{random.randrange(9)}{random.choice(Player.orientations)}"
+                try:
+                    temp_ship = Ship(ship, int(Player.letters.index(inp[0])), int(inp[1]), str(inp[2]))
+                except (NameError, IndexError):
+                    temp_ship = None
+                    print("syntax: X(Letter)Y(Number)Orientation(N, E, S, W)")
+                    continue
+                if temp_ship.valid(alert, self.ships):
+                    break
+            self.ships.append(temp_ship)
+            self.boards[0].place_ship(temp_ship)
+            if not place_random:
+                self.show_own_board()
+        if place_random:
+            self.show_own_board()
 
 
 class Game:
@@ -123,17 +172,20 @@ class Game:
                 print(f"{player} lost the game!")
                 sys.exit(1)
 
+    def init_game(self):
+        random_placement = bool(input("enter for random placement  "))
+        for player in self.players:
+            player.place_ships(not random_placement)
+
     def loop(self):
+        self.init_game()
         while True:
             self.check_win()
 
 
 def main():
-    # game = Game()
-    # game.loop()
-    player = Player()
-    player.place_ships()
-    player.show_boards()
+    game = Game()
+    game.loop()
 
 
 if __name__ == "__main__":

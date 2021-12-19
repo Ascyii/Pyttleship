@@ -26,6 +26,8 @@ Round Procedure:
 show board from other player
 ask player to fire in a tile
 show result
+when it shoot again
+turn tiles around sunk ship automatically into hitted water
 move to next player
 
 when player has no ships left
