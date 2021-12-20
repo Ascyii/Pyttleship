@@ -1,7 +1,6 @@
 import sys
 import random
 
-
 # TODO: check nearby fields in valid function
 
 
@@ -19,6 +18,12 @@ def check_for_commands(inp):
         sys.exit(1)
 
 
+def user_input(q):
+    inp = input(q)
+    check_for_commands(inp)
+    return inp
+
+
 class Field:
     field_status = {"default": ".", "water_shot": "o", "ship_dead": "X",
                     "carrier": "C", "battleship": "B", "destroyer": "D",
@@ -33,11 +38,22 @@ class Field:
     def __repr__(self):
         return str(self)
 
+    def show_hidden(self):
+        if self.status == Field.field_status["water_shot"]:
+            return str(Field.field_status["water_shot"])
+        elif self.status == Field.field_status["ship_dead"]:
+            return str(Field.field_status["ship_dead"])
+        else:
+            return str(Field.field_status["default"])
+
     def reset(self):
         self.status = Field.field_status["default"]
 
     def set(self, status):
         self.status = Field.field_status[status]
+
+    def hit(self):
+        pass
 
 
 class Ship:
@@ -92,18 +108,24 @@ class Board:
             self.field.append([Field() for _ in range(Board.grid_size)])
 
     def show_caption(self, shift):
-        print("     " + " "*shift + f"{self.owner}'s Board")
+        print("     " + " " * shift + f"{self.owner}'s Board")
 
     def update(self):
         for ship in self.ships:
             for field in ship.fields:
                 self.field[field[1]][field[0]].set(ship.name)
 
-    def show(self, shift=0):
+    def show(self, ships_hidden=False, shift=0):
         self.show_caption(shift)
         print(" " * (shift + 2), *Board.horizontal_row)
         for i, line in enumerate(self.field):
-            print(" " * shift, Board.vertical_row[i], *line)
+            if ships_hidden:
+                line_str = ""
+                for field in line:
+                    line_str += field.show_hidden() + " "
+                print(" " * shift, Board.vertical_row[i], line_str)
+            else:
+                print(" " * shift, Board.vertical_row[i], *line)
 
     def place_ship(self, ship):
         self.ships.append(ship)
@@ -124,14 +146,8 @@ class Player:
     def __str__(self):
         return f"Player{self.id}"
 
-    def show_board(self):
-        self.board.show()
-
-    def user_input(self, q):
-        inp = input(q)
-        if inp == "show":
-            self.show_board()
-        return inp
+    def show_board(self, hidden=False):
+        self.board.show(hidden)
 
     def place_ships(self, place_random=True):
         if not place_random:
@@ -143,7 +159,7 @@ class Player:
             # Syntax: X(Letter)Y(Number)Orientation(N, E, S, W)
             while True:
                 if not place_random:
-                    inp = self.user_input(f"Enter coordinates and orientation of {ship}({Ship.ship_lenght[ship]}): ")
+                    inp = user_input(f"Enter coordinates and orientation of {ship}({Ship.ship_lenght[ship]}): ")
                 else:
                     inp = f"{random.choice(Player.letters)}{random.randrange(9)}{random.choice(Player.orientations)}"
                 try:
@@ -158,14 +174,13 @@ class Player:
             self.board.place_ship(temp_ship)
             if not place_random:
                 self.show_board()
-        if place_random:
-            self.show_board()
 
 
 class Game:
     def __init__(self):
         self.players = [Player(player_id) for player_id in range(2)]
         self.active_player = random.choice(self.players)
+        self.init_game()
 
     def check_win(self):
         for player in self.players:
@@ -179,18 +194,29 @@ class Game:
         for player in self.players:
             player.place_ships(not random_placement)
 
-    def ask_for_shoot(self, player):
-        pass
-
-    def turn(self):
+    def turn(self, fire_random=False):
         player = self.active_player
-        player.show_board()
-        self.ask_for_shoot(player)
+        other_player = self.players[abs(self.players.index(player)-1)]
+        other_player.show_board(False)
+        print(f"{player}'s turn")
+        while True:
+            if not fire_random:
+                inp = user_input("Fire at:  ")
+            else:
+                inp = f"{random.choice(Player.letters)}{random.randrange(9)}"
+            try:
+                other_player.board.field[int(inp[1])][Player.letters.index(inp[0].upper())].hit()
+                break
+            except (NameError, IndexError, ValueError):
+                temp_ship = None
+                print("syntax: X(Letter)Y(Number)")
+                continue
+        self.active_player = other_player
 
     def loop(self):
-        self.init_game()
-        print(f"{self.active_player} is starting")
         while True:
+            self.turn()
+
             self.check_win()
 
 
