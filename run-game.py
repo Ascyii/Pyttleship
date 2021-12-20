@@ -2,6 +2,7 @@ import sys
 import random
 
 # TODO: check nearby fields in valid function
+# TODO: figure out system for ship detection
 
 
 CAPTION = r"""
@@ -208,7 +209,6 @@ class Game:
                 other_player.board.field[int(inp[1])][Player.letters.index(inp[0].upper())].hit()
                 break
             except (NameError, IndexError, ValueError):
-                temp_ship = None
                 print("syntax: X(Letter)Y(Number)")
                 continue
         self.active_player = other_player
@@ -216,7 +216,6 @@ class Game:
     def loop(self):
         while True:
             self.turn()
-
             self.check_win()
 
 
