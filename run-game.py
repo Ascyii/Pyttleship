@@ -54,7 +54,12 @@ class Field:
         self.status = Field.field_status[status]
 
     def hit(self):
-        pass
+        if self.status == Field.field_status["water_shot"] or self.status == Field.field_status["ship_dead"]:
+            raise KeyError("you cant shoot here")
+        elif self.status == Field.field_status["default"]:
+            self.status = Field.field_status["water_shot"]
+        else:
+            self.status = Field.field_status["ship_dead"]
 
 
 class Ship:
@@ -111,7 +116,7 @@ class Board:
     def show_caption(self, shift):
         print("     " + " " * shift + f"{self.owner}'s Board")
 
-    def update(self):
+    def draw_ships(self):
         for ship in self.ships:
             for field in ship.fields:
                 self.field[field[1]][field[0]].set(ship.name)
@@ -130,7 +135,10 @@ class Board:
 
     def place_ship(self, ship):
         self.ships.append(ship)
-        self.update()
+        self.draw_ships()
+
+    def hit(self, x, y):
+        self.field[y][x].hit()
 
 
 class Player:
@@ -206,11 +214,12 @@ class Game:
             else:
                 inp = f"{random.choice(Player.letters)}{random.randrange(9)}"
             try:
-                other_player.board.field[int(inp[1])][Player.letters.index(inp[0].upper())].hit()
+                other_player.board.hit(Player.letters.index(inp[0].upper()), int(inp[1]))
                 break
             except (NameError, IndexError, ValueError):
                 print("syntax: X(Letter)Y(Number)")
                 continue
+        other_player.show_board(True)
         self.active_player = other_player
 
     def loop(self):
