@@ -293,7 +293,6 @@ def on_exit():
 def main():
     game = Game()
     game.init()
-    game.show_boards()
     game.loop()
 
 

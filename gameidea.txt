@@ -2,7 +2,7 @@ This is the ideafile for Pyttleship
 started: 2021/12/16
 
 Ill make two versions for this game
-One wht you can play in the console
+One wht you can play in the console DONE
 And one what you can play in a window via pygame
 Later ill add an online mode for both types
 
