@@ -1,7 +1,7 @@
 import sys
 import random
+import itertools
 
-# TODO: check nearby fields in valid function
 # TODO: figure out system for ship detection
 
 
@@ -25,6 +25,24 @@ def user_input(q):
     return inp
 
 
+def get_nearby_coordinates(coordinates, size=9):
+    nearby = []
+    for given_coordinate in coordinates:
+        x = given_coordinate[0]
+        y = given_coordinate[1]
+        surrounding = [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1], [x - 1, y + 1], [x - 1, y - 1], [x + 1, y + 1],
+                       [x + 1, y - 1]]
+        del_coordinates = []
+        for coordinate in surrounding:
+            if coordinate in coordinates or any(i < 0 or i > size for i in coordinate):
+                del_coordinates.append(coordinate)
+        for coordinate in del_coordinates:
+            surrounding.remove(coordinate)
+        nearby.extend(surrounding)
+    nearby.sort()
+    return list(nearby for nearby, _ in itertools.groupby(nearby))
+
+
 class Field:
     field_status = {"default": ".", "water_shot": "o", "ship_dead": "X",
                     "carrier": "C", "battleship": "B", "destroyer": "D",
@@ -32,6 +50,7 @@ class Field:
 
     def __init__(self, status: str = "default"):
         self.status = Field.field_status[status]
+        self.is_ship = False
 
     def __str__(self):
         return str(self.status)
@@ -61,6 +80,14 @@ class Field:
         else:
             self.status = Field.field_status["ship_dead"]
 
+    def is_ship_func(self):
+        if self.status == Field.field_status["water_shot"] or self.status == Field.field_status["default"] \
+                or self.status == Field.field_status["ship_dead"]:
+            self.is_ship = False
+        else:
+            self.is_ship = True
+        return self.is_ship
+
 
 class Ship:
     ship_lenght = {"carrier": 5, "battleship": 4, "destroyer": 3,
@@ -71,6 +98,7 @@ class Ship:
     def __init__(self, name: str, x, y, orientation: str = "S"):
         self.name = name
         self.length = Ship.ship_lenght[name]
+        self.lives = self.length
         self.origin = [x, y]
         self.orientation = orientation
         self.fields = []
@@ -84,7 +112,7 @@ class Ship:
                     print(f"{self.name} out of boundaries!")
                 return False
         for ship in ships:
-            if any(coord in ship.fields for coord in self.fields):
+            if any(coord in ship.fields or coord in get_nearby_coordinates(ship.fields) for coord in self.fields):
                 if alert:
                     print(f"{self.name} is colliding with {ship.name}!")
                 return False
@@ -107,6 +135,7 @@ class Board:
         self.owner = owner
         self.field = []
         self.ships = []
+        self.dead_ships = 0
         self.reset()
 
     def reset(self):
@@ -138,7 +167,25 @@ class Board:
         self.draw_ships()
 
     def hit(self, x, y):
-        self.field[y][x].hit()
+        selected_field = self.field[y][x]
+        for ship in self.ships:
+            if [x, y] in ship.fields:
+                ship.lives -= 1
+        if selected_field.is_ship_func():
+            hit_ship = True
+        else:
+            hit_ship = False
+        selected_field.hit()
+        self.check_dead_ships()
+        return hit_ship
+
+    def check_dead_ships(self):
+        for ship in self.ships:
+            if ship.lives <= 0:
+                print(f"{ship.name} from {self.owner} sunk!")
+                self.dead_ships += 1
+                for field in get_nearby_coordinates(ship.fields):
+                    self.field[field[1]][field[0]].status = Field.field_status["water_shot"]
 
 
 class Player:
@@ -189,38 +236,49 @@ class Game:
     def __init__(self):
         self.players = [Player(player_id) for player_id in range(2)]
         self.active_player = random.choice(self.players)
-        self.init_game()
 
     def check_win(self):
         for player in self.players:
-            if player.ships_alive <= 0:
-                print(f"{player} lost the game!")
-                sys.exit(1)
+            if player.board.dead_ships >= 5:
+                print(f"{self.players[abs(self.players.index(player) - 1)]} won the game!")
+                on_exit()
 
-    def init_game(self):
+    def init(self, demonstration=False):
         print(CAPTION)
-        random_placement = bool(input("press enter for random placement  "))
+        if not demonstration:
+            random_placement = bool(input("press enter for random placement  "))
+        else:
+            random_placement = False
         for player in self.players:
             player.place_ships(not random_placement)
 
     def turn(self, fire_random=False):
         player = self.active_player
-        other_player = self.players[abs(self.players.index(player)-1)]
-        other_player.show_board(False)
-        print(f"{player}'s turn")
+        other_player = self.players[abs(self.players.index(player) - 1)]
+        other_player.show_board(True)
         while True:
             if not fire_random:
-                inp = user_input("Fire at:  ")
+                inp = user_input(f"{player} Fire at:  ")
             else:
                 inp = f"{random.choice(Player.letters)}{random.randrange(9)}"
             try:
-                other_player.board.hit(Player.letters.index(inp[0].upper()), int(inp[1]))
-                break
+                if not other_player.board.hit(Player.letters.index(inp[0].upper()), int(inp[1])):
+                    break
+                else:
+                    other_player.show_board(True)
+                    continue
+            except KeyError:
+                print("you cant shoot this field")
+                continue
             except (NameError, IndexError, ValueError):
                 print("syntax: X(Letter)Y(Number)")
                 continue
         other_player.show_board(True)
         self.active_player = other_player
+
+    def show_boards(self, hidden=False):
+        for player in self.players:
+            player.show_board(hidden)
 
     def loop(self):
         while True:
@@ -228,10 +286,27 @@ class Game:
             self.check_win()
 
 
+def on_exit():
+    sys.exit(1)
+
+
 def main():
     game = Game()
+    game.init()
+    game.show_boards()
     game.loop()
+
+
+def demo():
+    game = Game()
+    game.init(True)
+    game.show_boards()
+    game.active_player.board.ships[0].lives = 0
+    game.active_player.board.hit(0, 0)
+    game.show_boards()
 
 
 if __name__ == "__main__":
     main()
+    # demo()
+    on_exit()
